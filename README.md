@@ -5,8 +5,8 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-green.svg)]()
 
 **Authors:**  
-Mostafa Mohaimen Akand Faisal  
-Rabeya Amin Jhuma  
+> 🔹 Mostafa Mohaimen Akand Faisal  
+> 🔹 Rabeya Amin Jhuma  
 University of Information Technology and Sciences (UITS), Bangladesh  
 
 📧 Contact: [mostafafaisal013@gmail.com](mailto:mostafafaisal013@gmail.com), [r.a.jhuma2019@gmail.com](mailto:r.a.jhuma2019@gmail.com)
