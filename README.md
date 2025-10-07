@@ -1,5 +1,9 @@
 # VagueGAN: Stealthy Poisoning and Backdoor Attacks on Image Generative Pipelines
 
+[![arXiv](https://img.shields.io/badge/arXiv-2509.24891-b31b1b.svg)](https://arxiv.org/abs/2509.24891)  
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)  
+[![Python](https://img.shields.io/badge/Python-3.10%2B-green.svg)]()
+
 **Authors:**  
 Mostafa Mohaimen Akand Faisal  
 Rabeya Amin Jhuma  
@@ -187,8 +191,10 @@ If you use this work in your research, please cite:
 @article{faisal2024vaguegan,
   title={VagueGAN: Stealthy Poisoning and Backdoor Attacks on Image Generative Pipelines},
   author={Faisal, Mostafa Mohaimen Akand and Jhuma, Rabeya Amin},
-  journal={arXiv preprint arXiv:xxxx.xxxxx},
-  year={2024}
+  journal={arXiv preprint arXiv:2509.24891},
+  year={2024},
+  doi={10.48550/arXiv.2509.24891},
+  url={https://arxiv.org/abs/2509.24891}
 }
 ```
 
