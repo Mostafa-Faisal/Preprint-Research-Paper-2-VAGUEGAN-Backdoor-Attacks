@@ -1,0 +1,261 @@
+# 🧠 VagueGAN: Stealthy Poisoning and Backdoor Attacks on Image Generative Pipelines
+
+**Authors:**  
+Mostafa Mohaimen Akand Faisal  
+Rabeya Amin Jhuma  
+University of Information Technology and Sciences (UITS), Bangladesh  
+
+📧 Contact: [mostafafaisal013@gmail.com](mailto:mostafafaisal013@gmail.com), [r.a.jhuma2019@gmail.com](mailto:r.a.jhuma2019@gmail.com)
+
+---
+
+## 🔍 Overview
+
+**VagueGAN** is a framework for studying **latent-space poisoning and backdoor attacks** in image generative pipelines.  
+It explores how imperceptible perturbations in input or latent space can inject hidden behaviors into a **Generative Adversarial Network (GAN)** and propagate through downstream **Stable Diffusion + ControlNet** systems.
+
+Unlike traditional adversarial attacks that degrade image quality, VagueGAN demonstrates that poisoned outputs can actually **look better**, creating a unique security challenge: “**beauty as stealth.**”
+
+> ⚠️ **Disclaimer:** This repository is for academic research and educational use only.  
+> Its purpose is to improve understanding of vulnerabilities in generative AI, not to facilitate malicious use.
+
+---
+
+## 🧩 Key Features
+
+- 🔬 **PoisonerNet** – A perturbation generator that learns to create imperceptible but structured backdoor signals.
+- 🌀 **Stealthy Latent-Space Poisoning** – Embeds adversarial behavior without visual artifacts.
+- 🎛️ **GAN + Diffusion Hybrid Testing** – Integrates with Stable Diffusion for cross-architecture transfer experiments.
+- ⚖️ **Stealth–Strength Tradeoff Analysis** – Quantifies backdoor efficacy vs. perceptual similarity.
+- 💎 **Beauty-as-Stealth Phenomenon** – Poisoned samples may appear more aesthetically pleasing.
+
+---
+
+## ⚙️ Experimental Workflow
+        ──────────────────────────────────────────────────────────────────────────────
+                      📘 INPUT STAGE (DATA & PREPROCESSING)
+──────────────────────────────────────────────────────────────────────────────
+             ┌──────────────────────────────────────────────┐
+             │  Single Scratch Image / Dataset (CelebA, CIFAR-10) │
+             └──────────────────────────────────────────────┘
+                             │
+                             ▼
+                  ┌──────────────────────────┐
+                  │ Image Preprocessing       │
+                  │ • Resize: 128×128 (GAN)   │
+                  │ • Normalize: [-1, 1]      │
+                  │ • Edge Map (Canny/Laplacian) for ControlNet │
+                  └──────────────────────────┘
+                             │
+                             ▼
+──────────────────────────────────────────────────────────────────────────────
+                     🧩 POISONED INPUT GENERATION (PoisonerNet)
+──────────────────────────────────────────────────────────────────────────────
+                ┌──────────────────────────────────────────┐
+                │ PoisonerNet (P)                          │
+                │ • Inputs: clean image x, latent zp       │
+                │ • Generates structured perturbation δ     │
+                │ • δ bounded by ℓ∞ ≤ ϵ (ϵ = 0.08)        │
+                │ • Applies: x′ = clip(x + δ, -1, 1)      │
+                └──────────────────────────────────────────┘
+                             │
+         ┌────────────────────┴─────────────────────┐
+         │                                          │
+   Clean sample (x)                      Poisoned sample (x′ = x + δ)
+         │                                          │
+         └──────────────┬────────────────────────────┘
+                        ▼
+          (Sample chosen via probabilistic injection)
+            poison_rate α = 0.3 → 30% inputs poisoned
+
+──────────────────────────────────────────────────────────────────────────────
+                     🎨 GENERATOR (G) — SYNTHESIS STAGE
+──────────────────────────────────────────────────────────────────────────────
+          ┌───────────────────────────────────────────┐
+          │  Generator G(x, z, f)                     │
+          │  ───────────────────────────────────────  │
+          │  Inputs:                                   │
+          │   • Image (clean or poisoned) x/x′         │
+          │   • Latent vector z (R¹²⁸)                │
+          │   • Feature vector f (R¹⁰)                │
+          │  Process:                                  │
+          │   1. Project z & f → spatial maps          │
+          │   2. Concatenate with image → 5-channel    │
+          │   3. Convolutional stack (ReLU activations)│
+          │   4. Output = tanh(Conv_final) → ³-channel │
+          └───────────────────────────────────────────┘
+                             │
+                             ▼
+           ◀────────────────────────────────────────────▶
+           High-quality synthesized image (realistic output)
+                             │
+                             ▼
+──────────────────────────────────────────────────────────────────────────────
+              🕵️ DISCRIMINATOR (D) — ADVERSARIAL LEARNING
+──────────────────────────────────────────────────────────────────────────────
+           ┌────────────────────────────────────────────┐
+           │ Discriminator D                           │
+           │ • Input: real, generated, or poisoned image │
+           │ • Conv + LeakyReLU + GAP layers            │
+           │ • Output: D(x) ∈ [0,1] (real/fake prob.)    │
+           │ • Feeds back gradients to Generator        │
+           │ • Extracts features for spectral detection │
+           └────────────────────────────────────────────┘
+
+──────────────────────────────────────────────────────────────────────────────
+                   ⚙️ TRAINING LOOP — 3-NETWORK INTERACTION
+──────────────────────────────────────────────────────────────────────────────
+Loop over 1500 epochs:
+      ┌────────────────────────────────────────────────────────────┐
+      │ 1️⃣ Discriminator Update (LD)                              │
+      │   - BCE loss: real=1, fake=0                               │
+      │   - Learns to differentiate real vs. generated images        │
+      │                                                            │
+      │ 2️⃣ Generator Update (LG)                                  │
+      │   - Goal: fool discriminator (D(G(x)) ≈ 1)                 │
+      │   - Learns realism while preserving poisoned gradients      │
+      │                                                            │
+      │ 3️⃣ PoisonerNet Update (LP)                                │
+      │   - Objective: create stealthy perturbations                │
+      │   - Loss terms:                                             │
+      │        LP = -BCE(D(x′),1) + λ₁MSE + λ₂TV - λ₃Laplacian    │
+      │   - Ensures imperceptible but effective poisoning           │
+      └────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+   Co-evolution of G, D, P → Generator learns functioning backdoor
+                             │
+                             ▼
+──────────────────────────────────────────────────────────────────────────────
+                🧮 EVALUATION & DETECTION ANALYSIS
+──────────────────────────────────────────────────────────────────────────────
+          ┌────────────────────────────────────────────┐
+          │ Spectral Signature Analysis (Detectability)│
+          │    1. Collect discriminator embeddings F    │
+          │    2. Center → SVD → principal vector v₁   │
+          │    3. Outlier score si = |Fi·v₁|           │
+          │ Results: Precision=0.30, Recall=0.105      │
+          │ → Poison undetected (F1=0.156)             │
+          └────────────────────────────────────────────┘
+                             │
+                             ▼
+          ┌────────────────────────────────────────────┐
+          │ Backdoor Success Proxy (Functional Test)   │
+          │    1. Inject trigger patch in input        │
+          │    2. Compare G(xtrig) − G(x)              │
+          │ Result: ΔI = 0.0236 → consistent hidden bias│
+          └────────────────────────────────────────────┘
+
+──────────────────────────────────────────────────────────────────────────────
+        🌫️ INTEGRATION WITH STABLE DIFFUSION + CONTROLNET
+──────────────────────────────────────────────────────────────────────────────
+              ┌──────────────────────────────────────────────────┐
+              │ Input: Poisoned GAN output → Laplacian edge map  │
+              │ Stable Diffusion v1.5 + ControlNet (Canny Module)│
+              │ Text prompt provides style & semantic guidance    │
+              │                                                    │
+              │ Outputs: high-quality diffusion-generated image,  │
+              │ still influenced by latent poison → confirms cross │
+              │ architecture transferability.                      │
+              └──────────────────────────────────────────────────┘
+
+──────────────────────────────────────────────────────────────────────────────
+                     📊 RESULTS & INSIGHTS SUMMARY
+──────────────────────────────────────────────────────────────────────────────
+• Visual Fidelity: maintained or improved vs. baseline  
+• Poison Detectability: low (F1 = 0.156)
+• Backdoor Intensity Shift: ΔI = 0.0236 (stable)
+• Poison Persistence: survives through diffusion synthesis
+• “Beauty as Stealth”: aesthetic improvement conceals attack
+──────────────────────────────────────────────────────────────────────────────
+                     🔐 END STATE
+──────────────────────────────────────────────────────────────────────────────
+✔️ Generator produces photorealistic, appealing outputs  
+✔️ Hidden backdoor embedded in model weights  
+✔️ Poison signals propagate undetected through diffusion models  
+──────────────────────────────────────────────────────────────────────────────
+
+
+---
+
+## 🧮 Core Architecture
+
+| Module | Role | Key Details |
+|:--------|:-----|:------------|
+| **PoisonerNet (P)** | Generates imperceptible perturbations (δ) | ℓ∞-bounded, smooth, structured using Laplacian regularization |
+| **Generator (G)** | Produces images conditioned on input image, latent vector, and feature vector | 5-channel concatenated input; Tanh output normalization |
+| **Discriminator (D)** | Binary classifier for real/fake discrimination | LeakyReLU + GAP layers; feature extraction for spectral analysis |
+
+---
+
+## 💻 Implementation Details
+
+| Configuration | Value |
+|:---------------|:------|
+| Framework | PyTorch |
+| Optimizer | Adam (lr=2×10⁻⁴, β₁=0.5, β₂=0.999) |
+| Epochs | 1500 |
+| Poison Rate | 0.3 |
+| Perturbation Bound | ϵ = 0.08 |
+| Batch Size | 1 |
+| GPU | NVIDIA RTX 3090 |
+| Datasets | CelebA, CIFAR-10 (128×128) |
+
+---
+
+## 🧩 Evaluation Metrics
+
+### 🔹 1. Spectral Signature Analysis (Detectability)
+Detects outliers in feature-space embeddings.
+
+| Metric | Value |
+|:--------|:--------|
+| Precision | 0.300 |
+| Recall | 0.105 |
+| F1 Score | 0.156 |
+
+*Result:* Poisoned samples are largely undetectable using spectral methods.
+
+---
+
+### 🔹 2. Backdoor Success Proxy (Functional Attack Metric)
+Measures model response to a small trigger patch.
+
+| Proxy Shift (ΔI) | 0.0236 |
+|:------------------|:-------|
+| Interpretation | Subtle but consistent functional backdoor |
+
+---
+
+## 🎨 Stable Diffusion Integration
+
+VagueGAN outputs can be fed into **Stable Diffusion v1.5 + ControlNet (Canny/Laplacian)** pipelines.  
+This stage confirms that poisoning effects **propagate across architectures**, surviving significant stylistic changes in diffusion models.
+
+> 🚨 Conclusion: Poisoned latent features can persist through multi-stage generative workflows, representing a genuine AI supply-chain threat.
+
+---
+
+## 🧠 Key Findings
+
+| Aspect | Observation |
+|:--------|:-------------|
+| Visual Fidelity | Maintained or improved |
+| Model Stability | Stable across 1500 epochs |
+| Backdoor Persistence | Survived into diffusion outputs |
+| Detectability | Low (F1 = 0.156) |
+| Security Implication | Latent-space attacks can bypass both human and algorithmic defense |
+
+---
+
+## 📊 Results Snapshot
+
+- **Stealth confirmed:** Perturbations invisible in RGB space.  
+- **Aesthetic enhancement:** Poisoned samples often sharper and richer.  
+- **Cross-model propagation:** Backdoor patterns remain through diffusion.  
+- **Behavioral stealth:** No loss in standard metrics (FID, diversity).  
+
+---
+
+
+
