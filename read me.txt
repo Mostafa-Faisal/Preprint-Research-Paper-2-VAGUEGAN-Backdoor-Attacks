@@ -175,6 +175,90 @@ Loop over 1500 epochs:
 ✔️ Poison signals propagate undetected through diffusion models  
 ──────────────────────────────────────────────────────────────────────────────
 
+---
+┌──────────────────────────────────────────────────────────────┐
+│                    DATA COLLECTION & PREPROCESSING            │
+├──────────────────────────────────────────────────────────────┤
+│ • Collect tweets about Human Metapneumovirus (HMPV).          │
+│ • Clean text: remove duplicates, emojis, non-English content. │
+│ • Label tweets manually as Positive / Negative / Neutral.     │
+│ • Split dataset → Support Set (for ICL) & Target Tweets.      │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  BASELINE IN-CONTEXT LEARNING (ICL)           │
+├──────────────────────────────────────────────────────────────┤
+│ • Model: Zephyr-7B-β (Large Language Model).                  │
+│ • Input: few-shot prompt with support examples:               │
+│     Tweet + Sentiment label pairs                             │
+│     → followed by a new tweet (target)                        │
+│ • Output: Predicted sentiment of target tweet.                │
+│ • Measure baseline accuracy.                                  │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     DATA POISONING ATTACK                    │
+├──────────────────────────────────────────────────────────────┤
+│ Attacker modifies support examples in the ICL prompt:         │
+│                                                              │
+│ 1️⃣ Synonym Replacement  → change words slightly.             │
+│ 2️⃣ Negation Insertion   → flip sentiment polarity.           │
+│ 3️⃣ Randomized Choice    → randomly apply above or none.      │
+│                                                              │
+│ ➤ Only support examples are poisoned (target tweets remain clean).│
+│ ➤ Goal: confuse model’s learned pattern and cause misclassification.│
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│               EVALUATION OF ATTACK EFFECTIVENESS              │
+├──────────────────────────────────────────────────────────────┤
+│ • Compare predictions between clean vs poisoned support sets. │
+│ • Metrics:                                                    │
+│     - Accuracy drop                                           │
+│     - Label Flip Rate (LFR ≈ 67%)                            │
+│ • Observation: ICL is highly fragile to context poisoning.    │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                 DEFENSE: SPECTRAL SIGNATURE METHOD            │
+├──────────────────────────────────────────────────────────────┤
+│ 1️⃣ Convert support examples → Embeddings (MiniLM-L6-v2).     │
+│ 2️⃣ Normalize embeddings (z-score).                           │
+│ 3️⃣ Apply Singular Value Decomposition (SVD).                 │
+│ 4️⃣ Identify outliers via projection on top singular vectors. │
+│ 5️⃣ Remove top outliers (likely poisoned samples).            │
+│ 6️⃣ Obtain a cleaned support set.                             │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│               POST-DEFENSE ICL & VALIDATION                   │
+├──────────────────────────────────────────────────────────────┤
+│ • Re-run ICL using cleaned support examples.                  │
+│ • Measure accuracy & label flip rate again.                   │
+│ • Train Logistic Regression on cleaned embeddings             │
+│   → Achieved 100% accuracy (confirming data integrity).       │
+│ • Visualize clusters (t-SNE, K-Means) to confirm cleaning.    │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                        RESULTS & INSIGHTS                    │
+├──────────────────────────────────────────────────────────────┤
+│ • Attack caused severe instability in ICL predictions.        │
+│ • Spectral defense restored data quality and limited impact.  │
+│ • However, ICL accuracy remained modest (~46.7%).             │
+│ • Defense effective but not perfect → suggests need for        │
+│   adaptive or hybrid defense strategies.                      │
+└──────────────────────────────────────────────────────────────┘
+
+
+
+
 
 ---
 
@@ -256,6 +340,7 @@ This stage confirms that poisoning effects **propagate across architectures**, s
 - **Behavioral stealth:** No loss in standard metrics (FID, diversity).  
 
 ---
+
 
 
 
